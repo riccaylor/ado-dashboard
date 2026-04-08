@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADO Painting — CEO Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --navy: #1A3C5E;
+    --navy-light: #2A5080;
+    --orange: #E8700A;
+    --orange-light: #F4A040;
+    --green: #1D9E75;
+    --green-light: #E2F0D9;
+    --red: #C0392B;
+    --red-light: #FCEAEA;
+    --amber: #D4810A;
+    --amber-light: #FEF3E2;
+    --gray-100: #F5F5F3;
+    --gray-200: #E8E8E4;
+    --gray-400: #9A9A94;
+    --gray-600: #5A5A54;
+    --gray-800: #2A2A24;
+    --white: #FFFFFF;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--gray-100);
+    color: var(--gray-800);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--navy);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: var(--orange);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 600; color: white;
+  }
+  .header-title { color: white; font-size: 15px; font-weight: 500; line-height: 1.2; }
+  .header-sub { color: rgba(255,255,255,0.5); font-size: 11px; font-family: 'DM Mono', monospace; }
+  .last-updated { color: rgba(255,255,255,0.4); font-size: 11px; font-family: 'DM Mono', monospace; text-align: right; }
+
+  /* MAIN */
+  .main { padding: 20px 16px 40px; max-width: 600px; margin: 0 auto; }
+
+  /* SECTION LABELS */
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    margin: 24px 0 10px;
+  }
+
+  /* ALERT BANNER */
+  .alert-banner {
+    background: var(--red-light);
+    border: 1px solid #f0b8b8;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .alert-banner.amber {
+    background: var(--amber-light);
+    border-color: #f0d090;
+  }
+  .alert-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .alert-dot.amber { background: var(--amber); }
+  .alert-text { font-size: 13px; color: var(--gray-800); line-height: 1.5; }
+  .alert-text strong { font-weight: 600; }
+
+  /* METRIC CARDS */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .metric-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--gray-200);
+  }
+  .metric-card.full { grid-column: 1 / -1; }
+  .metric-label {
+    font-size: 11px;
+    color: var(--gray-400);
+    font-weight: 500;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .metric-value {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1;
+    font-family: 'DM Mono', monospace;
+  }
+  .metric-value.green { color: var(--green); }
+  .metric-value.red { color: var(--red); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-sub {
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+  .metric-sub.good { color: var(--green); }
+  .metric-sub.bad { color: var(--red); }
+  .metric-sub.warn { color: var(--amber); }
+
+  /* PROGRESS BARS */
+  .progress-wrap { margin-top: 10px; }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .progress-title { font-size: 13px; font-weight: 500; color: var(--gray-800); }
+  .progress-pct { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--gray-400); }
+  .progress-track {
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .3s ease;
+  }
+  .progress-fill.blue { background: var(--navy); }
+  .progress-fill.green { background: var(--green); }
+  .progress-fill.orange { background: var(--orange); }
+  .progress-fill.red { background: var(--red); }
+  .progress-fill.amber { background: var(--amber); }
+  .progress-nums {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--gray-400);
+  }
+
+  /* GP INDICATOR */
+  .gp-indicator {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+  }
+  .gp-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .gp-big {
+    font-size: 48px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    line-height: 1;
+  }
+  .gp-target-label {
+    text-align: right;
+  }
+  .gp-target-num {
+    font-size: 20px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--gray-400);
+  }
+  .gp-target-sub { font-size: 10px; color: var(--gray-400); text-transform: uppercase; letter-spacing: .04em; }
+  .gp-bar-wrap { margin-top: 4px; }
+
+  /* STATUS PILLS */
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .03em;
+  }
+  .pill.green { background: var(--green-light); color: #0F6E56; }
+  .pill.red { background: var(--red-light); color: var(--red); }
+  .pill.amber { background: var(--amber-light); color: var(--amber); }
+
+  /* SALE READINESS */
+  .readiness-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+  }
+  .readiness-score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .readiness-score {
+    font-size: 52px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    line-height: 1;
+    color: var(--amber);
+  }
+  .readiness-label { font-size: 13px; color: var(--gray-400); }
+  .readiness-label strong { color: var(--gray-800); display: block; font-size: 15px; margin-bottom: 2px; }
+  .readiness-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 13px;
+  }
+  .readiness-item:last-child { border-bottom: none; }
+  .readiness-check {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .readiness-check.done { background: var(--green-light); color: #0F6E56; }
+  .readiness-check.open { background: var(--red-light); color: var(--red); }
+  .readiness-check.partial { background: var(--amber-light); color: var(--amber); }
+  .readiness-name { flex: 1; color: var(--gray-800); }
+  .readiness-status { font-size: 11px; color: var(--gray-400); font-family: 'DM Mono', monospace; }
+
+  /* MARKETING TABLE */
+  .mkt-table { width: 100%; border-collapse: collapse; }
+  .mkt-table th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--gray-400);
+    font-weight: 600;
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .mkt-table th:not(:first-child) { text-align: right; }
+  .mkt-table td {
+    font-size: 12px;
+    padding: 8px 8px;
+    border-bottom: 1px solid var(--gray-200);
+    font-family: 'DM Mono', monospace;
+    color: var(--gray-800);
+  }
+  .mkt-table td:first-child { font-family: 'DM Sans', sans-serif; font-size: 13px; }
+  .mkt-table td:not(:first-child) { text-align: right; }
+  .mkt-table tr:last-child td { border-bottom: none; }
+  .mkt-table .total-row td { font-weight: 600; color: var(--navy); border-top: 2px solid var(--gray-200); }
+
+  /* ACTION ITEMS */
+  .action-item {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--gray-200);
+    margin-bottom: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .action-priority {
+    width: 6px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    align-self: stretch;
+    min-height: 20px;
+  }
+  .action-priority.urgent { background: var(--red); }
+  .action-priority.soon { background: var(--amber); }
+  .action-priority.normal { background: var(--navy); }
+  .action-body { flex: 1; }
+  .action-title { font-size: 13px; font-weight: 500; color: var(--gray-800); margin-bottom: 2px; }
+  .action-detail { font-size: 11px; color: var(--gray-400); }
+  .action-owner {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--gray-400);
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 2px;
+  }
+
+  /* CASH MILESTONE */
+  .milestone-card {
+    background: var(--navy);
+    border-radius: 12px;
+    padding: 20px 16px;
+    color: white;
+  }
+  .milestone-label { font-size: 11px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .milestone-amount { font-size: 38px; font-weight: 600; font-family: 'DM Mono', monospace; line-height: 1; margin-bottom: 4px; }
+  .milestone-target { font-size: 12px; color: rgba(255,255,255,0.5); font-family: 'DM Mono', monospace; margin-bottom: 14px; }
+  .milestone-bar-track { height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; margin-bottom: 6px; }
+  .milestone-bar-fill { height: 100%; border-radius: 3px; background: var(--orange); }
+  .milestone-bar-nums { display: flex; justify-content: space-between; font-size: 10px; font-family: 'DM Mono', monospace; color: rgba(255,255,255,0.4); }
+
+  /* UPDATE FORM */
+  .update-form {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+    margin-top: 8px;
+  }
+  .form-row { margin-bottom: 12px; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; display: block; }
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Mono', monospace;
+    color: var(--gray-800);
+    background: var(--gray-100);
+    outline: none;
+  }
+  .form-input:focus { border-color: var(--navy); background: white; }
+  .form-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .form-btn:active { background: var(--navy-light); }
+  .form-note { font-size: 11px; color: var(--gray-400); margin-top: 8px; text-align: center; }
+
+  /* TOGGLE UPDATE SECTION */
+  .toggle-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    color: var(--navy);
+    border: 1.5px solid var(--navy);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--gray-200);
+    margin: 24px 0;
+  }
+
+  /* EBITDA TRACKER */
+  .ebitda-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+  }
+  .ebitda-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 13px;
+  }
+  .ebitda-row:last-child { border-bottom: none; }
+  .ebitda-row-label { color: var(--gray-600); }
+  .ebitda-row-val { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--navy); }
+  .ebitda-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0 4px;
+    font-size: 15px;
+    font-weight: 600;
+    border-top: 2px solid var(--navy);
+    margin-top: 4px;
+  }
+  .ebitda-total-val { font-family: 'DM Mono', monospace; color: var(--navy); }
+  .valuation-implied {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--gray-100);
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .val-label { font-size: 12px; color: var(--gray-400); }
+  .val-range { font-size: 15px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--navy); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">A</div>
+    <div>
+      <div class="header-title">All Decked Out Painting</div>
+      <div class="header-sub">CEO DASHBOARD · 2026</div>
+    </div>
+  </div>
+  <div class="last-updated">
+    Updated<br>
+    <span id="lastUpdated">Apr 7, 2026</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ALERTS -->
+  <div class="section-label">⚡ Needs Attention</div>
+
+  <div class="alert-banner">
+    <div class="alert-dot"></div>
+    <div class="alert-text"><strong>2024 personal 1040 never filed.</strong> Get rental property expenses to your previous accountant today. Deadline was Oct 15, 2025 — you are already late.</div>
+  </div>
+
+  <div class="alert-banner">
+    <div class="alert-dot"></div>
+    <div class="alert-text"><strong>15 estimates unprocessed.</strong> At $5K average job size this is $75K in pipeline sitting idle. Highest revenue lever right now.</div>
+  </div>
+
+  <div class="alert-banner amber">
+    <div class="alert-dot amber"></div>
+    <div class="alert-text"><strong>4 subs missing COI.</strong> Zerbe, Gonzales, Bailor, Nuttle. Liability exposure on every job. Sale readiness blocker.</div>
+  </div>
+
+  <div class="alert-banner amber">
+    <div class="alert-dot amber"></div>
+    <div class="alert-text"><strong>Production $23K behind plan.</strong> $110K actual vs $133K plan YTD. Spring season must close this gap.</div>
+  </div>
+
+  <!-- CASH MILESTONE -->
+  <div class="section-label">💰 Cash Milestone</div>
+  <div class="milestone-card">
+    <div class="milestone-label">Real Cash (excl. borrowed $25K)</div>
+    <div class="milestone-amount" id="cashDisplay">$25,000</div>
+    <div class="milestone-target">Goal: $100,000 liquid</div>
+    <div class="milestone-bar-track">
+      <div class="milestone-bar-fill" id="cashBar" style="width: 25%"></div>
+    </div>
+    <div class="milestone-bar-nums">
+      <span>$0</span>
+      <span id="cashPct">25% there</span>
+      <span>$100K</span>
+    </div>
+  </div>
+
+  <!-- REVENUE -->
+  <div class="section-label">📈 Revenue — Week of Apr 7</div>
+  <div class="metric-grid">
+    <div class="metric-card full">
+      <div class="metric-label">Production YTD</div>
+      <div class="progress-wrap">
+        <div class="progress-header">
+          <span class="progress-title">Produced vs Plan</span>
+          <span class="progress-pct">$110,641 / $133,333</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill blue" style="width: 83%"></div>
+        </div>
+        <div class="progress-nums">
+          <span>83% of plan</span>
+          <span class="bad">-$22,692 behind</span>
+        </div>
+      </div>
+      <div class="progress-wrap" style="margin-top:14px">
+        <div class="progress-header">
+          <span class="progress-title">Sales Booked vs Plan</span>
+          <span class="progress-pct">$146,213 / $148,708</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill green" style="width: 98%"></div>
+        </div>
+        <div class="progress-nums">
+          <span>98% of plan</span>
+          <span class="good">Nearly on target ✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">April Jobs Sold</div>
+      <div class="metric-value" id="aprilSold">$47,000</div>
+      <div class="metric-sub warn">Target mid-$50Ks</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">April Projection</div>
+      <div class="metric-value amber">~Break Even</div>
+      <div class="metric-sub">$45K rev / $47K exp</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Job Size</div>
+      <div class="metric-value">$5,000</div>
+      <div class="metric-sub">Plan: $5,000 ✓</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Sales Rate</div>
+      <div class="metric-value">~50%</div>
+      <div class="metric-sub">Plan: 50% ✓</div>
+    </div>
+  </div>
+
+  <!-- GP HEALTH -->
+  <div class="section-label">📊 Gross Profit Health</div>
+  <div class="gp-indicator">
+    <div class="gp-row">
+      <div>
+        <div class="metric-label">YTD Blended GP%</div>
+        <div class="gp-big green" id="gpDisplay">50.0%</div>
+        <div class="metric-sub warn">↓ Below 55% target (Nagra impact)</div>
+      </div>
+      <div class="gp-target-label">
+        <div class="gp-target-num">55%</div>
+        <div class="gp-target-sub">Target</div>
+      </div>
+    </div>
+    <div class="metric-label" style="margin-bottom:8px">Monthly Trend</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div style="text-align:center;background:var(--green-light);border-radius:8px;padding:8px">
+        <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px">JAN</div>
+        <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:#0F6E56">61.8%</div>
+        <div class="pill green" style="font-size:10px">✓ Strong</div>
+      </div>
+      <div style="text-align:center;background:var(--green-light);border-radius:8px;padding:8px">
+        <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px">FEB</div>
+        <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:#0F6E56">62.5%</div>
+        <div class="pill green" style="font-size:10px">✓ Strong</div>
+      </div>
+      <div style="text-align:center;background:var(--red-light);border-radius:8px;padding:8px">
+        <div style="font-size:10px;color:var(--gray-400);margin-bottom:2px">MAR</div>
+        <div style="font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--red)">-6.5%</div>
+        <div class="pill red" style="font-size:10px">Nagra</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:10px 12px;background:var(--amber-light);border-radius:8px;font-size:12px;color:var(--amber)">
+      <strong>Note:</strong> Jan + Feb average = 62.2% GP. March distorted by Nagra job. True operational GP is healthy. Estimating engine being built to protect this going forward.
+    </div>
+  </div>
+
+  <!-- EBITDA / VALUATION -->
+  <div class="section-label">🏦 EBITDA & Sale Valuation</div>
+  <div class="ebitda-card">
+    <div class="metric-label" style="margin-bottom:10px">2025 Adjusted EBITDA (Est.)</div>
+    <div class="ebitda-row">
+      <span class="ebitda-row-label">Reported net income</span>
+      <span class="ebitda-row-val">$53,410</span>
+    </div>
+    <div class="ebitda-row">
+      <span class="ebitda-row-label">+ Management wages (Ric)</span>
+      <span class="ebitda-row-val">$39,188</span>
+    </div>
+    <div class="ebitda-row">
+      <span class="ebitda-row-label">+ Depreciation</span>
+      <span class="ebitda-row-val">$13,000</span>
+    </div>
+    <div class="ebitda-row">
+      <span class="ebitda-row-label">+ Coaching / prof. dev.</span>
+      <span class="ebitda-row-val">$22,778</span>
+    </div>
+    <div class="ebitda-row">
+      <span class="ebitda-row-label">+ Interest expense (est.)</span>
+      <span class="ebitda-row-val">~$3,000</span>
+    </div>
+    <div class="ebitda-total-row">
+      <span>Adj. EBITDA (2025)</span>
+      <span class="ebitda-total-val">~$131,376</span>
+    </div>
+    <div class="valuation-implied">
+      <span class="val-label">Implied valuation (4–5x)</span>
+      <span class="val-range">$525K – $657K</span>
+    </div>
+    <div style="margin-top:8px;padding:10px 12px;background:var(--gray-100);border-radius:8px">
+      <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px">2026 Target (20% net on $800K)</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--gray-600)">Projected adj. EBITDA</span>
+        <span style="font-size:15px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green)">~$210K</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+        <span style="font-size:13px;color:var(--gray-600)">Implied valuation</span>
+        <span style="font-size:15px;font-weight:600;font-family:'DM Mono',monospace;color:var(--green)">$840K – $1.05M</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OVERHEAD RATIO -->
+  <div class="section-label">⚙️ Overhead Control</div>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Overhead % (YTD)</div>
+      <div class="metric-value amber">32.3%</div>
+      <div class="metric-sub warn">Budget: 24.7%</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Marketing % (YTD)</div>
+      <div class="metric-value amber">~10.9%</div>
+      <div class="metric-sub warn">Target: 10% (incl. wages)</div>
+    </div>
+    <div class="metric-card full">
+      <div class="metric-label" style="margin-bottom:8px">Monthly Overhead ($)</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--gray-400);font-family:'DM Mono',monospace;margin-bottom:4px">
+        <span>Jan: $14,470</span><span>Feb: $16,113</span><span>Mar: $17,722</span>
+      </div>
+      <div style="font-size:12px;color:var(--gray-400)">Avg: $16,102/mo. Fixed costs growing — must be absorbed by Q2/Q3 revenue ramp to hit 20% net.</div>
+    </div>
+  </div>
+
+  <!-- MARKETING ROI -->
+  <div class="section-label">📣 Marketing ROI (YTD)</div>
+  <div style="background:var(--white);border-radius:12px;padding:14px 16px;border:1px solid var(--gray-200);overflow-x:auto">
+    <table class="mkt-table">
+      <thead>
+        <tr>
+          <th>Channel</th>
+          <th>Spend</th>
+          <th>Jobs</th>
+          <th>Revenue</th>
+          <th>CPJ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Meta/FB</td>
+          <td>$1,582</td>
+          <td>4</td>
+          <td>$20,153</td>
+          <td>$396</td>
+        </tr>
+        <tr>
+          <td>Google Paid</td>
+          <td>$275</td>
+          <td>3</td>
+          <td>$9,204</td>
+          <td>$92</td>
+        </tr>
+        <tr>
+          <td>RealWork</td>
+          <td>$3,412</td>
+          <td>0</td>
+          <td>$0</td>
+          <td style="color:var(--red)">∞</td>
+        </tr>
+        <tr>
+          <td>Home Show</td>
+          <td>$2,295</td>
+          <td>1</td>
+          <td>$1,949</td>
+          <td style="color:var(--red)">$2,295</td>
+        </tr>
+        <tr>
+          <td>Vehicles</td>
+          <td>$1,358</td>
+          <td>1</td>
+          <td>$631</td>
+          <td style="color:var(--red)">$1,358</td>
+        </tr>
+        <tr>
+          <td>Newsletter</td>
+          <td>$846</td>
+          <td>1+</td>
+          <td>TBD</td>
+          <td style="color:var(--green)">Early</td>
+        </tr>
+        <tr class="total-row">
+          <td>TOTAL</td>
+          <td>$12,113</td>
+          <td>23</td>
+          <td>$104,232</td>
+          <td>$527</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px;font-size:11px;color:var(--red)">⚠ RealWork: $3,412 spend, 0 attributed jobs. Evaluate or cancel. Google Paid: best CPJ at $92 — consider increasing budget.</div>
+  </div>
+
+  <!-- SALE READINESS -->
+  <div class="section-label">🎯 Sale Readiness Score</div>
+  <div class="readiness-card">
+    <div class="readiness-score-row">
+      <div>
+        <div class="readiness-score">32</div>
+        <div style="font-size:11px;color:var(--gray-400);margin-top:2px">out of 100</div>
+      </div>
+      <div class="readiness-label">
+        <strong>Early Stage</strong>
+        Foundation being built.<br>Critical gaps remain.
+      </div>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check open">✗</div>
+      <span class="readiness-name">Subcontractor COI compliance</span>
+      <span class="readiness-status">0 of 4</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check open">✗</div>
+      <span class="readiness-name">W2 conversion (Chris + Tim)</span>
+      <span class="readiness-status">Planned</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check partial">~</div>
+      <span class="readiness-name">Documented SOPs</span>
+      <span class="readiness-status">6 built</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check partial">~</div>
+      <span class="readiness-name">Consistent 55% GP (3+ months)</span>
+      <span class="readiness-status">2 of 3 ✓</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check open">✗</div>
+      <span class="readiness-name">Estimating system (owner-independent)</span>
+      <span class="readiness-status">In build</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check open">✗</div>
+      <span class="readiness-name">Sales role (not owner-dependent)</span>
+      <span class="readiness-status">David: 12 mo</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check open">✗</div>
+      <span class="readiness-name">AR days under 30</span>
+      <span class="readiness-status">$95K outstanding</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check done">✓</div>
+      <span class="readiness-name">KPI tracking system in place</span>
+      <span class="readiness-status">Done ✓</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check done">✓</div>
+      <span class="readiness-name">Clean bookkeeping (Jim Drinks)</span>
+      <span class="readiness-status">Done ✓</span>
+    </div>
+    <div class="readiness-item">
+      <div class="readiness-check done">✓</div>
+      <span class="readiness-name">Customer database (PRIME list)</span>
+      <span class="readiness-status">In progress</span>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--gray-100);border-radius:8px;font-size:12px;color:var(--gray-400)">
+      Score improves as each item is resolved. Target: 75+ before initiating sale process.
+    </div>
+  </div>
+
+  <!-- OPEN ACTIONS -->
+  <div class="section-label">✅ Priority Actions</div>
+
+  <div class="action-item">
+    <div class="action-priority urgent"></div>
+    <div class="action-body">
+      <div class="action-title">File 2024 personal 1040</div>
+      <div class="action-detail">Send rental property expenses to previous accountant TODAY</div>
+    </div>
+    <div class="action-owner">RIC</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority urgent"></div>
+    <div class="action-body">
+      <div class="action-title">Process 15 open estimates</div>
+      <div class="action-detail">$75K potential revenue sitting idle — this week</div>
+    </div>
+    <div class="action-owner">RIC</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority urgent"></div>
+    <div class="action-body">
+      <div class="action-title">Collect $95,329 AR</div>
+      <div class="action-detail">Get aging report from Jim — prioritize 60+ day balances</div>
+    </div>
+    <div class="action-owner">RIC</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority urgent"></div>
+    <div class="action-body">
+      <div class="action-title">Get COI from Zerbe, Gonzales, Bailor, Nuttle</div>
+      <div class="action-detail">Every job they're on right now carries liability exposure</div>
+    </div>
+    <div class="action-owner">RIC</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority soon"></div>
+    <div class="action-body">
+      <div class="action-title">Call Constant Contact — cancel $79.50/mo</div>
+      <div class="action-detail">855-222-9550 · Confirm annual plan active, monthly cancelled</div>
+    </div>
+    <div class="action-owner">RIC</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority soon"></div>
+    <div class="action-body">
+      <div class="action-title">Email MT Bank re: savings account visibility</div>
+      <div class="action-detail">Copy Jim Drinks on the email</div>
+    </div>
+    <div class="action-owner">RIC</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority soon"></div>
+    <div class="action-body">
+      <div class="action-title">Newsletter resend to 288 non-openers</div>
+      <div class="action-detail">New subject line within 48 hrs of original send</div>
+    </div>
+    <div class="action-owner">HAILEY</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority normal"></div>
+    <div class="action-body">
+      <div class="action-title">Jim: Fix marketing formula in MVP</div>
+      <div class="action-detail">Include Hailey + Gini wages in marketing expense total</div>
+    </div>
+    <div class="action-owner">JIM</div>
+  </div>
+
+  <div class="action-item">
+    <div class="action-priority normal"></div>
+    <div class="action-body">
+      <div class="action-title">Upload DripJobs production rates</div>
+      <div class="action-detail">Needed to complete estimating engine build</div>
+    </div>
+    <div class="action-owner">RIC</div>
+  </div>
+
+  <!-- UPDATE SECTION -->
+  <div class="divider"></div>
+  <div class="section-label">📝 Update Dashboard</div>
+  <p style="font-size:13px;color:var(--gray-400);margin-bottom:10px">Enter your weekly numbers every Monday morning. Takes 2 minutes.</p>
+
+  <div class="update-form">
+    <div class="form-row">
+      <label class="form-label">Revenue Produced This Week ($)</label>
+      <input type="number" class="form-input" id="weekRevenue" placeholder="e.g. 18967">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Sales Booked This Week ($)</label>
+      <input type="number" class="form-input" id="weekSales" placeholder="e.g. 10000">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Real Cash Balance ($)</label>
+      <input type="number" class="form-input" id="cashBalance" placeholder="e.g. 25000">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Completed Job GP% (avg this week)</label>
+      <input type="number" class="form-input" id="weekGP" placeholder="e.g. 58.5">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Open Estimates (count)</label>
+      <input type="number" class="form-input" id="openEstimates" placeholder="e.g. 15">
+    </div>
+    <button class="form-btn" onclick="updateDashboard()">Update Dashboard</button>
+    <div class="form-note">Data stays on this device. Share with Jim by showing this screen during Tuesday calls.</div>
+  </div>
+
+  <div style="height:20px"></div>
+  <div style="text-align:center;font-size:11px;color:var(--gray-400);font-family:'DM Mono',monospace">
+    All Decked Out Services, Inc. · CEO Dashboard v1.0<br>
+    North star: $10M personal wealth · Current valuation: ~$525–$657K
+  </div>
+
+</div>
+
+<script>
+// Load saved data
+window.onload = function() {
+  const saved = localStorage.getItem('ado_dashboard');
+  if (saved) {
+    const d = JSON.parse(saved);
+    if (d.cash) updateCash(d.cash);
+    if (d.gp) updateGP(d.gp);
+    if (d.updated) document.getElementById('lastUpdated').textContent = d.updated;
+  }
+};
+
+function updateCash(val) {
+  const cash = parseFloat(val);
+  const pct = Math.min((cash / 100000) * 100, 100);
+  document.getElementById('cashDisplay').textContent = '$' + cash.toLocaleString();
+  document.getElementById('cashBar').style.width = pct + '%';
+  document.getElementById('cashPct').textContent = Math.round(pct) + '% there';
+}
+
+function updateGP(val) {
+  const gp = parseFloat(val);
+  const el = document.getElementById('gpDisplay');
+  el.textContent = gp.toFixed(1) + '%';
+  if (gp >= 55) {
+    el.className = 'gp-big green';
+  } else if (gp >= 45) {
+    el.className = 'gp-big amber';
+  } else {
+    el.className = 'gp-big red';
+  }
+}
+
+function updateDashboard() {
+  const cash = document.getElementById('cashBalance').value;
+  const gp = document.getElementById('weekGP').value;
+  const estimates = document.getElementById('openEstimates').value;
+
+  if (cash) updateCash(cash);
+  if (gp) updateGP(gp);
+
+  // Update open estimates alert
+  if (estimates) {
+    const est = parseInt(estimates);
+    const potential = est * 5000;
+    const alerts = document.querySelectorAll('.alert-text');
+    alerts.forEach(a => {
+      if (a.textContent.includes('estimates unprocessed')) {
+        a.innerHTML = `<strong>${est} estimates unprocessed.</strong> At $5K average job size this is $${potential.toLocaleString()} in pipeline sitting idle. Highest revenue lever right now.`;
+      }
+    });
+  }
+
+  // Save to localStorage
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  localStorage.setItem('ado_dashboard', JSON.stringify({
+    cash: cash,
+    gp: gp,
+    estimates: estimates,
+    updated: dateStr
+  }));
+  document.getElementById('lastUpdated').textContent = dateStr;
+
+  alert('Dashboard updated! ✓');
+}
+</script>
+
+</body>
+</html>
