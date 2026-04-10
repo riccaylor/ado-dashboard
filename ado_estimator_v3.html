@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ADO Estimating Engine v3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root {
+  --navy:#1A3C5E;--navy2:#2A5080;--orange:#E8700A;
+  --green:#1D9E75;--green-l:#E2F0D9;--red:#C0392B;--red-l:#FCEAEA;
+  --amber:#D4810A;--amber-l:#FEF3E2;--gray1:#F5F5F3;--gray2:#E8E8E4;
+  --gray4:#9A9A94;--gray6:#5A5A54;--gray8:#2A2A24;--white:#FFFFFF;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'DM Sans',sans-serif;background:var(--gray1);color:var(--gray8);min-height:100vh;padding-bottom:80px;}
+.header{background:var(--navy);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{width:32px;height:32px;background:var(--orange);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:white;flex-shrink:0;}
+.ht{margin-left:10px;}
+.ht-title{color:white;font-size:14px;font-weight:500;}
+.ht-sub{color:rgba(255,255,255,0.45);font-size:10px;font-family:'DM Mono',monospace;}
+.pills{display:flex;gap:4px;}
+.pill{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);transition:.2s;}
+.pill.active{background:var(--orange);width:20px;border-radius:4px;}
+.pill.done{background:var(--green);}
+.main{padding:16px;max-width:600px;margin:0 auto;}
+.slabel{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gray4);margin:20px 0 8px;}
+.card{background:var(--white);border-radius:12px;padding:16px;border:1px solid var(--gray2);margin-bottom:10px;}
+.field{margin-bottom:12px;}
+.field:last-child{margin-bottom:0;}
+label{font-size:11px;font-weight:600;color:var(--gray6);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;}
+input[type=text],input[type=number],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--gray2);border-radius:8px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--gray8);background:var(--gray1);outline:none;transition:.15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--navy);background:white;}
+textarea{resize:vertical;min-height:56px;font-size:14px;}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.r4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+.cbg{display:flex;flex-wrap:wrap;gap:8px;}
+.cbi{display:flex;align-items:center;gap:6px;background:var(--gray1);border:1px solid var(--gray2);border-radius:8px;padding:8px 10px;cursor:pointer;transition:.15s;flex:1;min-width:100px;}
+.cbi.sel{background:#EBF3FA;border-color:var(--navy);}
+.cbc{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--gray4);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cbi.sel .cbc{background:var(--navy);border-color:var(--navy);}
+.cbci{width:8px;height:8px;background:white;border-radius:2px;display:none;}
+.cbi.sel .cbci{display:block;}
+.cbl{font-size:13px;font-weight:500;color:var(--gray8);}
+/* ROOM BLOCKS */
+.room-block{background:var(--white);border-radius:12px;border:1px solid var(--gray2);margin-bottom:10px;overflow:hidden;}
+.room-hdr{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;}
+.room-hdr.std{background:var(--navy);}
+.room-hdr.void{background:#534AB7;}
+.room-hdr.stair{background:#0F6E56;}
+.room-hdr.kitchen{background:#854F0B;}
+.room-title{color:white;font-size:14px;font-weight:600;}
+.room-num{background:var(--orange);color:white;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.room-body{padding:14px 16px;}
+.rm-btn{background:rgba(255,255,255,0.15);border:none;color:white;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray2);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-label{font-size:13px;color:var(--gray8);}
+.toggle-sub{font-size:11px;color:var(--gray4);}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--gray2);border-radius:11px;transition:.2s;}
+.toggle-slider:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.2s;}
+.toggle input:checked + .toggle-slider{background:var(--navy);}
+.toggle input:checked + .toggle-slider:before{transform:translateX(18px);}
+/* SPECIALTY */
+.specialty-block{background:var(--gray1);border-radius:10px;border:1px solid var(--gray2);padding:12px 14px;margin-bottom:8px;}
+.specialty-title{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+.remove-spec-btn{background:var(--red-l);border:none;color:var(--red);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.add-spec-btn{width:100%;padding:9px;background:transparent;border:1px dashed var(--gray2);border-radius:8px;color:var(--navy);font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;}
+/* COUNTER */
+.counter-row{display:flex;align-items:center;gap:10px;}
+.counter-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--gray2);background:var(--gray1);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--navy);}
+.counter-val{font-size:16px;font-weight:600;font-family:'DM Mono',monospace;min-width:32px;text-align:center;color:var(--navy);}
+/* BUTTONS */
+.add-room-btn{width:100%;padding:11px;background:transparent;border:1.5px dashed var(--gray2);border-radius:12px;color:var(--navy);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;}
+.btn-primary{width:100%;padding:14px;background:var(--navy);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;}
+.btn-secondary{width:100%;padding:12px;background:transparent;color:var(--navy);border:1.5px solid var(--navy);border-radius:10px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;}
+.btn-orange{width:100%;padding:12px;background:var(--orange);color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;}
+/* ROOM TYPE SELECTOR */
+.room-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.rt-btn{padding:12px 10px;border:1.5px solid var(--gray2);border-radius:10px;cursor:pointer;text-align:center;font-size:12px;font-weight:600;color:var(--gray6);background:var(--white);}
+.rt-btn:active{opacity:.8;}
+.rt-btn.std{border-color:var(--navy);color:var(--navy);}
+.rt-btn.void{border-color:#534AB7;color:#534AB7;}
+.rt-btn.stair{border-color:#0F6E56;color:#0F6E56;}
+.rt-btn.kitchen{border-color:#854F0B;color:#854F0B;}
+/* PRICING */
+.pricing-panel{background:var(--navy);border-radius:14px;padding:18px 16px;margin-bottom:10px;}
+.pp-title{color:rgba(255,255,255,0.5);font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;}
+.dual-ctrl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.ctrl-box{background:rgba(255,255,255,0.08);border-radius:10px;padding:12px;}
+.ctrl-label{font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.ctrl-input{width:100%;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:7px;padding:8px 10px;color:white;font-size:18px;font-weight:600;font-family:'DM Mono',monospace;outline:none;text-align:center;}
+.ctrl-input:focus{border-color:var(--orange);}
+.ctrl-sub{font-size:10px;color:rgba(255,255,255,0.3);text-align:center;margin-top:4px;}
+.price-hero{margin-bottom:14px;}
+.price-amount{font-size:44px;font-weight:600;font-family:'DM Mono',monospace;color:white;line-height:1;}
+.price-gp{font-size:12px;font-family:'DM Mono',monospace;color:rgba(255,255,255,0.5);margin-top:4px;}
+.price-gp.good{color:#4DD9A8;}
+.price-gp.warn{color:#FAC775;}
+.price-gp.bad{color:#F09595;}
+.pm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pm-box{background:rgba(255,255,255,0.06);border-radius:8px;padding:10px 8px;text-align:center;}
+.pm-label{font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.pm-val{font-size:15px;font-weight:600;font-family:'DM Mono',monospace;color:white;}
+/* PRODUCT PANEL */
+.prod-panel{background:var(--white);border-radius:12px;border:1px solid var(--gray2);padding:14px 16px;margin-bottom:10px;}
+.prod-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray2);}
+.prod-row:last-child{border-bottom:none;}
+.prod-surf{font-size:11px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.05em;}
+.prod-name{font-size:13px;font-weight:500;color:var(--gray8);margin-top:1px;}
+.prod-cost{font-size:11px;color:var(--gray4);font-family:'DM Mono',monospace;}
+.prod-billed{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--navy);}
+.swap-btn{background:var(--gray1);border:1px solid var(--gray2);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--navy);cursor:pointer;font-family:'DM Sans',sans-serif;margin-left:8px;white-space:nowrap;}
+/* MODAL */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:white;border-radius:20px 20px 0 0;padding:20px 16px 40px;width:100%;max-width:600px;max-height:80vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:600;color:var(--navy);margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--gray4);margin-bottom:16px;}
+.po{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1.5px solid var(--gray2);border-radius:10px;margin-bottom:8px;cursor:pointer;}
+.po.current{border-color:var(--navy);background:#EBF3FA;}
+.po-name{font-size:13px;font-weight:500;color:var(--gray8);}
+.po-sheen{font-size:11px;color:var(--gray4);margin-top:2px;}
+.po-cost{font-size:11px;color:var(--gray4);font-family:'DM Mono',monospace;}
+.po-billed{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--navy);}
+.po-save{font-size:11px;font-weight:600;color:var(--green);font-family:'DM Mono',monospace;}
+.po-add{font-size:11px;font-weight:600;color:var(--red);font-family:'DM Mono',monospace;}
+.modal-close{width:100%;padding:12px;background:var(--gray1);border:none;border-radius:10px;font-size:14px;font-weight:600;color:var(--gray6);cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;}
+/* MARKUP */
+.mu-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.mu-label{font-size:13px;color:var(--gray6);flex:1;}
+.mu-input{width:70px;padding:8px 10px;border:1px solid var(--gray2);border-radius:8px;font-size:15px;font-family:'DM Mono',monospace;text-align:center;background:var(--gray1);outline:none;}
+.mu-input:focus{border-color:var(--navy);background:white;}
+/* LINE ITEMS */
+.lit{width:100%;border-collapse:collapse;}
+.lit th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--gray4);font-weight:600;text-align:left;padding:6px 5px;border-bottom:1px solid var(--gray2);}
+.lit th:not(:first-child){text-align:right;}
+.lit td{font-size:12px;padding:6px 5px;border-bottom:1px solid var(--gray2);font-family:'DM Mono',monospace;color:var(--gray8);}
+.lit td:first-child{font-family:'DM Sans',sans-serif;font-size:12px;}
+.lit td:not(:first-child){text-align:right;}
+.lit tr:last-child td{border-bottom:none;}
+.tot-row td{font-weight:600;color:var(--navy);border-top:2px solid var(--gray2)!important;}
+/* PROPOSAL */
+.prop-box{background:var(--gray1);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:var(--gray8);white-space:pre-wrap;font-family:'DM Sans',sans-serif;border:1px solid var(--gray2);}
+.copy-btn{width:100%;padding:11px;background:var(--green);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:8px;}
+.br-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--gray2);font-size:13px;}
+.br-row:last-child{border-bottom:none;}
+.br-label{color:var(--gray6);}
+.br-val{font-family:'DM Mono',monospace;font-weight:500;color:var(--navy);text-align:right;flex:1;margin-left:8px;}
+/* CONDITIONS */
+.cond-sel{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.co{padding:9px 12px;border:1.5px solid var(--gray2);border-radius:8px;cursor:pointer;text-align:center;font-size:12px;font-weight:500;color:var(--gray6);}
+.co.sel{border-color:var(--navy);background:#EBF3FA;color:var(--navy);}
+/* KPI */
+.kpi-banner{background:var(--green-l);border:1px solid #9FE1CB;border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.kpi-title{font-size:10px;font-weight:600;color:#0F6E56;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.kpi-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+.kpi-l{color:#3B6D11;}
+.kpi-v{font-family:'DM Mono',monospace;font-weight:600;color:#0F6E56;}
+.warn-box{background:var(--amber-l);border:1px solid #f0d090;border-radius:10px;padding:12px 14px;font-size:13px;color:var(--amber);margin-bottom:8px;line-height:1.5;}
+.danger-box{background:var(--red-l);border:1px solid #f0b8b8;border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:8px;line-height:1.5;}
+.screen{display:none;}
+.screen.active{display:block;}
+.back-btn{background:transparent;border:none;color:rgba(255,255,255,0.6);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;padding:0;}
+.section-divider{height:1px;background:var(--gray2);margin:14px 0;}
+.info-tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:#EBF3FA;color:var(--navy);margin-left:6px;}
+</style>
+</head>
+<body>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOut(event)">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Swap Product</div>
+    <div class="modal-sub" id="modalSub">Select replacement — price impact shown</div>
+    <div id="modalOpts"></div>
+    <button class="modal-close" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<div class="header">
+  <div style="display:flex;align-items:center;">
+    <button class="back-btn" id="backBtn" onclick="goBack()" style="display:none;margin-right:10px;">← Back</button>
+    <div class="logo">A</div>
+    <div class="ht">
+      <div class="ht-title">ADO Estimating Engine <span style="font-size:11px;opacity:.5">v3</span></div>
+      <div class="ht-sub" id="screenLabel">Interior Repaint</div>
+    </div>
+  </div>
+  <div class="pills">
+    <div class="pill active" id="p0"></div>
+    <div class="pill" id="p1"></div>
+    <div class="pill" id="p2"></div>
+    <div class="pill" id="p3"></div>
+  </div>
+</div>
+
+<!-- SCREEN 0: JOB INFO -->
+<div class="screen active" id="screen0">
+<div class="main">
+  <div class="slabel">Step 1 — Job & Customer</div>
+  <div class="card">
+    <div class="field r2">
+      <div><label>Customer Name</label><input type="text" id="custName" placeholder="Susan Hartman"></div>
+      <div><label>Date</label><input type="text" id="estDate"></div>
+    </div>
+    <div class="field"><label>Address</label><input type="text" id="custAddr" placeholder="412 Devonshire Dr, Harrisburg PA"></div>
+    <div class="field"><label>Target Start</label><input type="text" id="startDate" placeholder="Apr 21, 2026"></div>
+  </div>
+  <div class="slabel">Customer Profile</div>
+  <div class="card">
+    <div class="field">
+      <label>Value Type</label>
+      <select id="custType">
+        <option value="">— Select —</option>
+        <option value="quality">Quality Buyer — wants it done right</option>
+        <option value="price">Price Buyer — comparing quotes</option>
+        <option value="reliability">Reliability Buyer — had bad experience</option>
+        <option value="trust">Trust Buyer — referral, relationship</option>
+        <option value="timeline">Timeline Buyer — has a hard deadline</option>
+      </select>
+    </div>
+    <div class="field"><label>Key Concern</label><input type="text" id="custConcern" placeholder="crisp lines, done before May 15..."></div>
+  </div>
+  <div class="slabel">Crew & Pricing</div>
+  <div class="card">
+    <div class="field">
+      <label>Assign Crew</label>
+      <select id="crewSel">
+        <option value="crew1">Crew 1 — David + Tim ($68/hr loaded)</option>
+        <option value="crew2">Crew 2 — Chris + Devlin ($57/hr loaded)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Paint Markup Above Cost</label>
+      <div class="mu-row">
+        <span class="mu-label">Default 50% — adjust per job:</span>
+        <input type="number" class="mu-input" id="markupPct" value="50" min="0" max="200">
+        <span style="font-size:14px;color:var(--gray6);font-weight:600;">%</span>
+      </div>
+    </div>
+  </div>
+  <button class="btn-primary" onclick="goTo(1)">Next — Add Rooms →</button>
+</div>
+</div>
+
+<!-- SCREEN 1: ROOMS -->
+<div class="screen" id="screen1">
+<div class="main">
+  <div class="slabel">Step 2 — Rooms & Scope</div>
+
+  <div class="room-type-grid">
+    <button class="rt-btn std" onclick="addRoom('std')">+ Standard Room</button>
+    <button class="rt-btn void" onclick="addRoom('void')">+ Void / Arch</button>
+    <button class="rt-btn stair" onclick="addRoom('stair')">+ Stairway</button>
+    <button class="rt-btn kitchen" onclick="addRoom('kitchen')">+ Kitchen / Cabinets</button>
+  </div>
+
+  <div id="roomList"></div>
+
+  <div class="slabel">Site Conditions</div>
+  <div class="card">
+    <div class="field">
+      <label>Overall Condition</label>
+      <div class="cond-sel">
+        <div class="co sel" id="cond-good" onclick="selCond('good')">Good — light prep</div>
+        <div class="co" id="cond-minor" onclick="selCond('minor')">Minor repairs (+20%)</div>
+        <div class="co" id="cond-moderate" onclick="selCond('moderate')">Moderate (+45%)</div>
+        <div class="co" id="cond-heavy" onclick="selCond('heavy')">Heavy / wallpaper (+75%)</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Special Conditions</label>
+      <div class="cbg">
+        <div class="cbi" onclick="togCb(this)" data-val="occupied"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Occupied</span></div>
+        <div class="cbi" onclick="togCb(this)" data-val="furniture"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Heavy furniture</span></div>
+        <div class="cbi" onclick="togCb(this)" data-val="dark"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Dark to light</span></div>
+        <div class="cbi" onclick="togCb(this)" data-val="smoker"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Smoker</span></div>
+        <div class="cbi" onclick="togCb(this)" data-val="wallpaper"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Wallpaper removal</span></div>
+      </div>
+    </div>
+    <div class="field"><label>Site Notes</label><textarea id="siteNotes" placeholder="Anything the crew needs to know..."></textarea></div>
+  </div>
+
+  <button class="btn-primary" onclick="calculate()">Calculate Estimate →</button>
+  <button class="btn-secondary" onclick="goTo(0)">← Back</button>
+</div>
+</div>
+
+<!-- SCREEN 2: RESULTS -->
+<div class="screen" id="screen2">
+<div class="main">
+  <div class="slabel">Step 3 — Pricing</div>
+  <div id="warnZone"></div>
+
+  <div class="pricing-panel">
+    <div class="pp-title">Adjust either control — both update live</div>
+    <div class="dual-ctrl">
+      <div class="ctrl-box">
+        <div class="ctrl-label">GP Target %</div>
+        <input type="number" class="ctrl-input" id="gpCtrl" value="55" min="20" max="75" step="0.5" oninput="onGP()">
+        <div class="ctrl-sub">Primary control</div>
+      </div>
+      <div class="ctrl-box">
+        <div class="ctrl-label">Charge Rate $/hr</div>
+        <input type="number" class="ctrl-input" id="rateCtrl" value="87" step="1" oninput="onRate()">
+        <div class="ctrl-sub">Derived · override here</div>
+      </div>
+    </div>
+    <div class="price-hero">
+      <div style="font-size:11px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Selling Price</div>
+      <div class="price-amount" id="resPrice">$0</div>
+      <div class="price-gp good" id="resGPLine">55.0% GP · $87/hr effective</div>
+    </div>
+    <div class="pm-grid">
+      <div class="pm-box"><div class="pm-label">Labor Hrs</div><div class="pm-val" id="resHrs">0</div></div>
+      <div class="pm-box"><div class="pm-label">Labor Cost</div><div class="pm-val" id="resLabor">$0</div></div>
+      <div class="pm-box"><div class="pm-label">Material Billed</div><div class="pm-val" id="resMat">$0</div></div>
+    </div>
+  </div>
+
+  <div class="slabel">Products — tap Swap to change</div>
+  <div class="prod-panel">
+    <div class="prod-row">
+      <div><div class="prod-surf">Walls</div><div class="prod-name" id="pn_walls">SW Duration Home Interior Matte</div></div>
+      <div style="text-align:right;margin-left:10px;"><div class="prod-cost" id="pc_walls">Cost: $47.95</div><div class="prod-billed" id="pb_walls">Billed: $71.93</div></div>
+      <button class="swap-btn" onclick="openModal('walls')">Swap</button>
+    </div>
+    <div class="prod-row">
+      <div><div class="prod-surf">Ceilings</div><div class="prod-name" id="pn_ceilings">SW ProMar Ceiling Paint Flat</div></div>
+      <div style="text-align:right;margin-left:10px;"><div class="prod-cost" id="pc_ceilings">Cost: $24.95</div><div class="prod-billed" id="pb_ceilings">Billed: $37.43</div></div>
+      <button class="swap-btn" onclick="openModal('ceilings')">Swap</button>
+    </div>
+    <div class="prod-row">
+      <div><div class="prod-surf">Trim / Doors / Windows</div><div class="prod-name" id="pn_trim">SW Emerald Urethane Trim Semi-Gloss</div></div>
+      <div style="text-align:right;margin-left:10px;"><div class="prod-cost" id="pc_trim">Cost: $62.45</div><div class="prod-billed" id="pb_trim">Billed: $93.68</div></div>
+      <button class="swap-btn" onclick="openModal('trim')">Swap</button>
+    </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--gray2);">
+      <div class="mu-row">
+        <span style="font-size:12px;color:var(--gray6);">Material markup:</span>
+        <input type="number" class="mu-input" id="markupPct2" value="50" min="0" max="200" onchange="recalc()">
+        <span style="font-size:13px;color:var(--gray6);font-weight:600;">%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="slabel">Line Items</div>
+  <div class="card" style="overflow-x:auto;padding:12px 10px;">
+    <table class="lit">
+      <thead><tr><th>Item</th><th>Hrs</th><th>Gal</th><th>Labor</th><th>Mat</th></tr></thead>
+      <tbody id="litBody"></tbody>
+    </table>
+  </div>
+
+  <div class="kpi-banner">
+    <div class="kpi-title">KPI — This Job</div>
+    <div class="kpi-row"><span class="kpi-l">Effective charge rate</span><span class="kpi-v" id="kRate">—</span></div>
+    <div class="kpi-row"><span class="kpi-l">GP percentage</span><span class="kpi-v" id="kGP">—</span></div>
+    <div class="kpi-row"><span class="kpi-l">Revenue per day (2-person crew)</span><span class="kpi-v" id="kRPD">—</span></div>
+    <div class="kpi-row"><span class="kpi-l">vs $5K avg job</span><span class="kpi-v" id="kAvg">—</span></div>
+  </div>
+
+  <button class="btn-primary" onclick="genProposal();genBrief();goTo(3);">Generate Proposal & Job Brief →</button>
+  <button class="btn-secondary" onclick="goTo(1)">← Adjust Rooms</button>
+</div>
+</div>
+
+<!-- SCREEN 3: PROPOSAL -->
+<div class="screen" id="screen3">
+<div class="main">
+  <div class="slabel">Step 4 — Proposal (paste into DripJobs)</div>
+  <div class="card">
+    <div class="prop-box" id="propText"></div>
+    <button class="copy-btn" onclick="copyProp()">Copy Proposal to Clipboard</button>
+  </div>
+  <div class="slabel">Crew Job Brief</div>
+  <div class="card">
+    <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px;">Job Brief — All Decked Out Painting</div>
+    <div id="briefContent"></div>
+    <div style="margin-top:12px;padding:12px;background:var(--green-l);border-radius:8px;">
+      <div style="font-size:10px;font-weight:600;color:#0F6E56;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Labor Savings Bonus</div>
+      <div id="bonusCalc" style="font-size:13px;color:#0F6E56;line-height:1.7;"></div>
+    </div>
+  </div>
+  <button class="btn-orange" onclick="startOver()">+ New Estimate</button>
+  <button class="btn-secondary" onclick="goTo(2)">← Back to Pricing</button>
+</div>
+</div>
+
+<script>
+// ── PRODUCTS ─────────────────────────────────────────────
+const PRODS = {
+  walls:[
+    {n:'SW Duration Home Interior Matte',p:47.95,sh:'Matte',sp:350},
+    {n:'SW Duration Home Interior Flat',p:47.95,sh:'Flat',sp:350},
+    {n:'SW Emerald Interior Acrylic Latex Satin',p:58.45,sh:'Satin',sp:350},
+    {n:'SW Emerald Interior Acrylic Latex Flat',p:59.84,sh:'Flat',sp:350},
+    {n:'SW SuperPaint Interior Acrylic Latex Satin',p:42.95,sh:'Satin',sp:350},
+    {n:'SW SuperPaint Interior Acrylic Latex Flat',p:40.95,sh:'Flat',sp:350},
+    {n:'SW Cashmere Interior',p:41.95,sh:'Eggshell',sp:350},
+    {n:'SW Extreme Cover Flat',p:24.95,sh:'Flat',sp:350},
+    {n:'SW Extreme Cover Eggshell',p:26.95,sh:'Eggshell',sp:350},
+  ],
+  ceilings:[
+    {n:'SW ProMar Ceiling Paint Flat',p:24.95,sh:'Flat',sp:350},
+    {n:'SW Premium Ceiling Paint Acrylic Latex',p:36.45,sh:'Flat',sp:350},
+    {n:'SW ProMar 400 Interior',p:26.00,sh:'Flat',sp:350},
+    {n:'SW SuperPaint Interior Flat',p:40.95,sh:'Flat',sp:350},
+  ],
+  trim:[
+    {n:'SW Emerald Urethane Trim Enamel Semi-Gloss',p:62.45,sh:'Semi-Gloss',sp:350},
+    {n:'SW Emerald Urethane Trim Enamel Satin',p:60.45,sh:'Satin',sp:350},
+    {n:'SW Emerald Urethane Trim Enamel Gloss',p:64.45,sh:'Gloss',sp:350},
+    {n:'SW ProClassic Waterborne Interior Satin',p:49.90,sh:'Satin',sp:350},
+    {n:'SW ProClassic Waterborne Interior Semi-Gloss',p:51.90,sh:'Semi-Gloss',sp:350},
+    {n:'SW Duration Home Interior Semi-Gloss',p:53.95,sh:'Semi-Gloss',sp:350},
+  ]
+};
+let selProds = {walls:0,ceilings:0,trim:0};
+let modalSurf = null;
+
+const CREW = {
+  crew1:{name:'Crew 1 — David + Tim',rate:68},
+  crew2:{name:'Crew 2 — Chris + Devlin',rate:57}
+};
+const RATES = {
+  w8:150,w9:150,wv:100,ceil:125,
+  base3:85,base5:75,crown3:65,
+  door6p:0.80,doorFlush:1.00,winDH:1.60,winSP:1.00
+};
+const CMOD = {good:1.0,minor:1.20,moderate:1.45,heavy:1.75};
+
+let roomCount=0, rooms=[], selCond_='good', calcBase={};
+let currentScreen=0;
+
+// ── NAV ──────────────────────────────────────────────────
+function goTo(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen'+n).classList.add('active');
+  currentScreen=n;
+  for(let i=0;i<4;i++){
+    const p=document.getElementById('p'+i);
+    p.className='pill'+(i<n?' done':i===n?' active':'');
+  }
+  document.getElementById('backBtn').style.display=n>0?'block':'none';
+  const labs=['Interior Repaint','Room Details','Pricing Control','Proposal & Brief'];
+  document.getElementById('screenLabel').textContent=labs[n];
+  window.scrollTo(0,0);
+}
+function goBack(){if(currentScreen>0)goTo(currentScreen-1);}
+function selCond(c){
+  selCond_=c;
+  ['good','minor','moderate','heavy'].forEach(x=>{
+    document.getElementById('cond-'+x).classList.toggle('sel',x===c);
+  });
+}
+function togCb(el){el.classList.toggle('sel');}
+function getChecked(){
+  return Array.from(document.querySelectorAll('#screen1 .cbi.sel')).map(e=>e.dataset.val).filter(Boolean);
+}
+
+// ── ROOM BUILDERS ────────────────────────────────────────
+function addRoom(type){
+  roomCount++;
+  const id=roomCount;
+  rooms.push({id,type});
+  const div=document.createElement('div');
+  div.className='room-block';
+  div.id='rb_'+id;
+  const typeLabels={std:'Standard Room',void:'Void / Arch',stair:'Stairway',kitchen:'Kitchen / Cabinets'};
+  const hdrClass={std:'std',void:'void',stair:'stair',kitchen:'kitchen'};
+  const stdNames=['Living Room','Dining Room','Kitchen','Master Bedroom','Bedroom 2','Bedroom 3','Hallway','Master Bath','Bathroom','Office','Foyer'];
+  const sugName = type==='stair'?'Stairway':type==='void'?'Void / Arch':type==='kitchen'?'Kitchen':stdNames[rooms.filter(r=>r.type==='std').length-1]||('Room '+id);
+
+  let bodyHTML='';
+
+  if(type==='std'){
+    bodyHTML=stdRoomHTML(id,sugName);
+  } else if(type==='void'){
+    bodyHTML=voidRoomHTML(id);
+  } else if(type==='stair'){
+    bodyHTML=stairRoomHTML(id);
+  } else if(type==='kitchen'){
+    bodyHTML=kitchenRoomHTML(id);
+  }
+
+  div.innerHTML=`
+    <div class="room-hdr ${hdrClass[type]}">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="room-num">${id}</div>
+        <div class="room-title" id="rt_${id}">${sugName}</div>
+      </div>
+      <button class="rm-btn" onclick="removeRoom(${id})">Remove</button>
+    </div>
+    <div class="room-body">${bodyHTML}</div>`;
+  document.getElementById('roomList').appendChild(div);
+}
+
+function stdRoomHTML(id,name){
+  return `
+    <div class="field"><label>Room Name</label><input type="text" id="rName_${id}" value="${name}" oninput="document.getElementById('rt_${id}').textContent=this.value"></div>
+    <div class="r2">
+      <div class="field"><label>Length (ft)</label><input type="number" id="rLen_${id}" placeholder="14"></div>
+      <div class="field"><label>Width (ft)</label><input type="number" id="rWid_${id}" placeholder="12"></div>
+    </div>
+    <div class="field"><label>Ceiling Height</label>
+      <select id="rCeil_${id}">
+        <option value="8">8 ft standard</option>
+        <option value="9">9 ft</option>
+        <option value="10">10 ft</option>
+        <option value="vaulted">Vaulted / Cathedral</option>
+      </select>
+    </div>
+    <div class="field"><label>Surfaces</label>
+      <div class="cbg">
+        <div class="cbi sel" onclick="togCb(this)" data-surf="walls"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Walls</span></div>
+        <div class="cbi sel" onclick="togCb(this)" data-surf="ceiling"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Ceiling</span></div>
+        <div class="cbi" onclick="togCb(this)" data-surf="trim"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Trim</span></div>
+        <div class="cbi" onclick="togCb(this)" data-surf="crown"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Crown</span></div>
+      </div>
+    </div>
+    <div class="r3">
+      <div class="field"><label>Doors</label><input type="number" id="rDoors_${id}" placeholder="1" min="0"></div>
+      <div class="field"><label>Windows</label><input type="number" id="rWins_${id}" placeholder="2" min="0" onchange="updatePrepDefaults(${id})"></div>
+      <div class="field"><label>Accent Wall</label><select id="rAccent_${id}"><option value="0">No</option><option value="1">Yes</option></select></div>
+    </div>
+    <div class="field"><label>Coats</label>
+      <select id="rCoats_${id}">
+        <option value="2">2 coats (standard)</option>
+        <option value="1">1 coat (touch-up)</option>
+        <option value="3">3 coats (dark to light)</option>
+      </select>
+    </div>
+    <div class="section-divider"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:8px;">Prep Items</div>
+    <div class="toggle-row" id="treatToggleRow_${id}">
+      <div><div class="toggle-label">Window Treatments</div><div class="toggle-sub" id="treatSub_${id}">Remove &amp; replace — 15 min/window</div></div>
+      <label class="toggle"><input type="checkbox" id="treatOn_${id}" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Electrical Covers</div><div class="toggle-sub" id="elecSub_${id}">4 receptacles + 2 switches = 6 covers</div></div>
+      <label class="toggle"><input type="checkbox" id="elecOn_${id}" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="r2" style="margin-top:8px;">
+      <div class="field"><label>Receptacles</label>
+        <div class="counter-row">
+          <button class="counter-btn" onclick="adjCounter('recep_${id}',-1)">−</button>
+          <div class="counter-val" id="recep_${id}">4</div>
+          <button class="counter-btn" onclick="adjCounter('recep_${id}',1)">+</button>
+        </div>
+      </div>
+      <div class="field"><label>Switch Plates</label>
+        <div class="counter-row">
+          <button class="counter-btn" onclick="adjCounter('switch_${id}',-1)">−</button>
+          <div class="counter-val" id="switch_${id}">2</div>
+          <button class="counter-btn" onclick="adjCounter('switch_${id}',1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="section-divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:12px;font-weight:600;color:var(--navy);">Specialty Areas</span>
+      <button class="add-spec-btn" style="width:auto;padding:5px 12px;margin:0;" onclick="addSpecialty(${id})">+ Add Specialty Area</button>
+    </div>
+    <div id="specList_${id}"></div>`;
+}
+
+function voidRoomHTML(id){
+  return `
+    <div style="font-size:12px;color:var(--gray4);margin-bottom:12px;">Archway, pass-through, or open doorway without a door. Deducts from wall area and adds casing trim.</div>
+    <div class="field"><label>Label / Description</label><input type="text" id="rName_${id}" value="Void / Arch" oninput="document.getElementById('rt_${id}').textContent=this.value"></div>
+    <div class="r2">
+      <div class="field"><label>Opening Width (ft)</label><input type="number" id="voidW_${id}" placeholder="4"></div>
+      <div class="field"><label>Opening Height (ft)</label><input type="number" id="voidH_${id}" placeholder="8"></div>
+    </div>
+    <div class="field"><label>Trim Casing Width</label>
+      <select id="voidCasing_${id}">
+        <option value="3">3 inch</option>
+        <option value="5">5 inch</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div class="field"><label>Assign Wall Deduction To Room</label><input type="text" id="voidRoom_${id}" placeholder="e.g. Living Room (deducts from that room's walls)"></div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Trim Around Circumference</div><div class="toggle-sub">Casing added to trim line item</div></div>
+      <label class="toggle"><input type="checkbox" id="voidTrim_${id}" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="field" style="margin-top:8px;"><label>Coats</label>
+      <select id="rCoats_${id}"><option value="2">2 coats</option><option value="1">1 coat</option><option value="3">3 coats</option></select>
+    </div>`;
+}
+
+function stairRoomHTML(id){
+  return `
+    <div style="font-size:12px;color:var(--gray4);margin-bottom:12px;">Walls calculated as trapezoid from run length and ceiling height. Stringer = 1.15 × run length.</div>
+    <div class="r2">
+      <div class="field"><label>Stair Run Length (ft)</label><input type="number" id="stairRun_${id}" placeholder="14"></div>
+      <div class="field"><label>Ceiling Height at Top (ft)</label><input type="number" id="stairH_${id}" placeholder="9"></div>
+    </div>
+    <div class="field"><label>Number of Sides</label>
+      <select id="stairSides_${id}"><option value="1">1 side</option><option value="2">2 sides</option></select>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Include Ceiling</div><div class="toggle-sub">Paint ceiling above stairwell</div></div>
+      <label class="toggle"><input type="checkbox" id="stairCeil_${id}"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Include Stringer Trim</div><div class="toggle-sub">Angled baseboard — auto-calculated at 1.15× run</div></div>
+      <label class="toggle"><input type="checkbox" id="stairStr_${id}" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="field" style="margin-top:8px;"><label>Coats</label>
+      <select id="rCoats_${id}"><option value="2">2 coats</option><option value="1">1 coat</option><option value="3">3 coats</option></select>
+    </div>`;
+}
+
+function kitchenRoomHTML(id){
+  return `
+    <div style="font-size:12px;color:var(--gray4);margin-bottom:12px;">Enter room dimensions then cabinet blockouts. Cabinet areas deducted from paintable wall space.</div>
+    <div class="field"><label>Room Name</label><input type="text" id="rName_${id}" value="Kitchen" oninput="document.getElementById('rt_${id}').textContent=this.value"></div>
+    <div class="r2">
+      <div class="field"><label>Length (ft)</label><input type="number" id="rLen_${id}" placeholder="14"></div>
+      <div class="field"><label>Width (ft)</label><input type="number" id="rWid_${id}" placeholder="12"></div>
+    </div>
+    <div class="field"><label>Ceiling Height</label>
+      <select id="rCeil_${id}"><option value="8">8 ft</option><option value="9">9 ft</option><option value="10">10 ft</option></select>
+    </div>
+    <div class="field"><label>Surfaces</label>
+      <div class="cbg">
+        <div class="cbi sel" onclick="togCb(this)" data-surf="walls"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Walls</span></div>
+        <div class="cbi sel" onclick="togCb(this)" data-surf="ceiling"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Ceiling</span></div>
+        <div class="cbi" onclick="togCb(this)" data-surf="trim"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Trim</span></div>
+      </div>
+    </div>
+    <div class="field"><label>Coats</label>
+      <select id="rCoats_${id}"><option value="2">2 coats</option><option value="1">1 coat</option><option value="3">3 coats</option></select>
+    </div>
+    <div class="section-divider"></div>
+    <div style="font-size:12px;font-weight:600;color:#854F0B;margin-bottom:8px;">Cabinet Blockouts</div>
+    <div class="field">
+      <label>Upper Cabinet Run — Length (ft)</label>
+      <input type="number" id="cabLen_${id}" placeholder="12">
+    </div>
+    <div class="field"><label>Upper Cabinet Height</label>
+      <select id="cabH_${id}"><option value="2.5">30 inch</option><option value="3">36 inch</option><option value="3.5">42 inch</option><option value="custom">Custom</option></select>
+    </div>
+    <div class="field" id="cabHCustom_${id}" style="display:none;">
+      <label>Custom Cabinet Height (ft)</label><input type="number" id="cabHCust_${id}" placeholder="2.5">
+    </div>
+    <div class="field">
+      <label>Space Above Cabinets to Ceiling — Length (ft)</label>
+      <input type="number" id="aboveCabLen_${id}" placeholder="12">
+    </div>
+    <div class="field">
+      <label>Space Above Cabinets — Height (ft)</label>
+      <input type="number" id="aboveCabH_${id}" placeholder="1.5">
+    </div>
+    <div class="toggle-row">
+      <div><div class="toggle-label">Backsplash Zone — Paint?</div><div class="toggle-sub">Area between upper and lower cabinets</div></div>
+      <label class="toggle"><input type="checkbox" id="backSplash_${id}"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="r2" style="margin-top:8px;" id="bsFields_${id}" style="display:none;">
+      <div class="field"><label>Backsplash Length (ft)</label><input type="number" id="bsLen_${id}" placeholder="8"></div>
+      <div class="field"><label>Backsplash Height (ft)</label><input type="number" id="bsH_${id}" placeholder="1.5"></div>
+    </div>
+    <div style="margin-top:8px;padding:10px 12px;background:var(--amber-l);border-radius:8px;font-size:12px;color:var(--amber);">
+      ⚠ If ceiling selected: plastic protection add applied automatically (+0.5 hrs prep, +0.25 hrs cleanup, +1 roll plastic $8 billed at markup)
+    </div>
+    <div class="section-divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:12px;font-weight:600;color:var(--navy);">Specialty Areas</span>
+      <button class="add-spec-btn" style="width:auto;padding:5px 12px;margin:0;" onclick="addSpecialty(${id})">+ Add Specialty Area</button>
+    </div>
+    <div id="specList_${id}"></div>`;
+}
+
+// ── SPECIALTY AREAS ──────────────────────────────────────
+let specCount=0;
+function addSpecialty(roomId){
+  specCount++;
+  const sid=specCount;
+  const container=document.getElementById('specList_'+roomId);
+  if(!container)return;
+  const div=document.createElement('div');
+  div.className='specialty-block';
+  div.id='spec_'+sid;
+  div.innerHTML=`
+    <div class="specialty-title">
+      <span>Specialty Area</span>
+      <button class="remove-spec-btn" onclick="document.getElementById('spec_${sid}').remove()">Remove</button>
+    </div>
+    <div class="field"><label>Label</label><input type="text" id="sLabel_${sid}" placeholder="Knee wall, island, fireplace surround..."></div>
+    <div class="r2">
+      <div class="field"><label>Length (ft)</label><input type="number" id="sLen_${sid}" placeholder="6"></div>
+      <div class="field"><label>Height (ft)</label><input type="number" id="sH_${sid}" placeholder="3"></div>
+    </div>
+    <div class="field"><label>Surfaces</label>
+      <div class="cbg">
+        <div class="cbi sel" onclick="togCb(this)" data-spec-surf="walls"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Walls / Surface</span></div>
+        <div class="cbi" onclick="togCb(this)" data-spec-surf="trim"><div class="cbc"><div class="cbci"></div></div><span class="cbl">Trim</span></div>
+      </div>
+    </div>
+    <div class="field"><label>Coats</label>
+      <select id="sCoats_${sid}"><option value="2">2 coats</option><option value="1">1 coat</option><option value="3">3 coats</option></select>
+    </div>
+    <input type="hidden" id="sRoom_${sid}" value="${roomId}">`;
+  container.appendChild(div);
+}
+
+function adjCounter(id,delta){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const val=Math.max(0,parseInt(el.textContent||'0')+delta);
+  el.textContent=val;
+}
+
+function updatePrepDefaults(id){
+  const wins=parseInt(document.getElementById('rWins_'+id)?.value)||0;
+  const row=document.getElementById('treatToggleRow_'+id);
+  if(row) row.style.display=wins>0?'flex':'none';
+}
+
+function removeRoom(id){
+  const idx=rooms.findIndex(r=>r.id===id);
+  if(idx>-1)rooms.splice(idx,1);
+  document.getElementById('rb_'+id)?.remove();
+}
+
+// ── CALCULATION ──────────────────────────────────────────
+function calculate(){
+  const allBlocks=document.querySelectorAll('.room-block');
+  if(!allBlocks.length){alert('Add at least one room.');return;}
+
+  const condMod=CMOD[selCond_]||1.0;
+  const crewKey=document.getElementById('crewSel').value;
+  const crew=CREW[crewKey];
+  const markup=(parseFloat(document.getElementById('markupPct').value)||50)/100;
+  const specials=getChecked();
+
+  let totalHrs=0, totalMatRaw=0, lineItems=[];
+
+  allBlocks.forEach(block=>{
+    const id=block.id.replace('rb_','');
+    const roomObj=rooms.find(r=>r.id==id);
+    if(!roomObj)return;
+    const type=roomObj.type||'std';
+    const coats=parseInt(document.getElementById('rCoats_'+id)?.value)||2;
+    const coatAdj=coats===1?1.4:coats===3?0.7:1.0;
+    const wallProd=PRODS.walls[selProds.walls];
+    const ceilProd=PRODS.ceilings[selProds.ceilings];
+    const trimProd=PRODS.trim[selProds.trim];
+
+    if(type==='std'||type==='kitchen'){
+      const len=parseFloat(document.getElementById('rLen_'+id)?.value)||0;
+      const wid=parseFloat(document.getElementById('rWid_'+id)?.value)||0;
+      if(!len||!wid)return;
+      const ceilH=document.getElementById('rCeil_'+id)?.value||'8';
+      const ceilHNum=ceilH==='vaulted'?12:parseFloat(ceilH);
+      const perim=2*(len+wid);
+      let wallSF=perim*ceilHNum;
+      const ceilSF=len*wid;
+      const vaultAdj=ceilH==='vaulted'?0.65:ceilH==='10'?0.85:1.0;
+
+      // Kitchen cabinet deductions
+      let cabDeduct=0;
+      if(type==='kitchen'){
+        const cabLen=parseFloat(document.getElementById('cabLen_'+id)?.value)||0;
+        let cabHVal=document.getElementById('cabH_'+id)?.value||'2.5';
+        let cabH=cabHVal==='custom'?(parseFloat(document.getElementById('cabHCust_'+id)?.value)||2.5):parseFloat(cabHVal);
+        cabDeduct=cabLen*cabH;
+
+        const abLen=parseFloat(document.getElementById('aboveCabLen_'+id)?.value)||0;
+        const abH=parseFloat(document.getElementById('aboveCabH_'+id)?.value)||0;
+        // above cabinets IS painted — add as separate area
+        if(abLen&&abH){
+          const abSF=abLen*abH;
+          const abHrs=(abSF/RATES.w8*coatAdj)*condMod;
+          const abGals=(abSF*coats)/wallProd.sp;
+          const abMat=abGals*wallProd.p;
+          totalHrs+=abHrs; totalMatRaw+=abMat;
+          lineItems.push({item:'Kitchen — Above Cabinets',sf:abSF,hrs:abHrs,gals:abGals,mat:abMat,prod:wallProd});
+        }
+
+        // Backsplash if painted
+        const bsOn=document.getElementById('backSplash_'+id)?.checked;
+        if(bsOn){
+          const bsLen=parseFloat(document.getElementById('bsLen_'+id)?.value)||0;
+          const bsH=parseFloat(document.getElementById('bsH_'+id)?.value)||0;
+          if(bsLen&&bsH){
+            const bsSF=bsLen*bsH;
+            const bsHrs=(bsSF/RATES.w8*coatAdj)*condMod;
+            const bsGals=(bsSF*coats)/wallProd.sp;
+            const bsMat=bsGals*wallProd.p;
+            totalHrs+=bsHrs; totalMatRaw+=bsMat;
+            lineItems.push({item:'Kitchen — Backsplash Zone',sf:bsSF,hrs:bsHrs,gals:bsGals,mat:bsMat,prod:wallProd});
+          }
+          cabDeduct+=0; // backsplash already accounted
+        }
+      }
+
+      wallSF=Math.max(0,wallSF-cabDeduct);
+
+      const surfs={};
+      block.querySelectorAll('[data-surf]').forEach(el=>{surfs[el.dataset.surf]=el.classList.contains('sel');});
+      const rName=document.getElementById('rName_'+id)?.value||'Room';
+      const hasAccent=parseInt(document.getElementById('rAccent_'+id)?.value)||0;
+
+      if(surfs.walls&&wallSF>0){
+        const rate=(ceilH==='vaulted'?RATES.wv:RATES.w8)*coatAdj;
+        let hrs=(wallSF/rate)*condMod;
+        if(hasAccent)hrs*=1.15;
+        const gals=(wallSF*coats)/wallProd.sp;
+        const mat=gals*wallProd.p;
+        totalHrs+=hrs; totalMatRaw+=mat;
+        lineItems.push({item:rName+' — Walls',sf:wallSF,hrs,gals,mat,prod:wallProd});
+      }
+      if(surfs.ceiling&&ceilSF>0){
+        const rate=RATES.ceil*coatAdj*vaultAdj;
+        const hrs=(ceilSF/rate)*condMod;
+        const gals=(ceilSF*coats)/ceilProd.sp;
+        const mat=gals*ceilProd.p;
+        totalHrs+=hrs; totalMatRaw+=mat;
+        lineItems.push({item:rName+' — Ceiling',sf:ceilSF,hrs,gals,mat,prod:ceilProd});
+
+        // Kitchen ceiling plastic add
+        if(type==='kitchen'){
+          const plasticHrs=0.75; // 0.5 prep + 0.25 cleanup
+          const plasticMat=8*(1+markup); // 1 roll at $8 billed at markup
+          totalHrs+=plasticHrs;
+          lineItems.push({item:'Kitchen — Ceiling Protection (plastic, prep/cleanup)',hrs:plasticHrs,gals:0,mat:plasticMat});
+        }
+      }
+      if(surfs.trim&&perim>0){
+        const rate=RATES.base3*coatAdj;
+        const hrs=(perim/rate)*condMod;
+        const gals=(perim*0.0833*coats)/trimProd.sp;
+        const mat=gals*trimProd.p;
+        totalHrs+=hrs; totalMatRaw+=mat;
+        lineItems.push({item:rName+' — Trim / Baseboards',lf:perim,hrs,gals,mat,prod:trimProd});
+      }
+      if(surfs.crown&&perim>0){
+        const rate=RATES.crown3*coatAdj;
+        const hrs=(perim/rate)*condMod;
+        const gals=(perim*0.0833*coats)/trimProd.sp;
+        const mat=gals*trimProd.p;
+        totalHrs+=hrs; totalMatRaw+=mat;
+        lineItems.push({item:rName+' — Crown Moulding',lf:perim,hrs,gals,mat,prod:trimProd});
+      }
+      const doors=parseInt(document.getElementById('rDoors_'+id)?.value)||0;
+      if(doors>0){
+        const hrsEa=RATES.door6p*(coats===1?0.6:coats===3?1.4:1.0);
+        const hrs=doors*hrsEa*condMod;
+        const gals=doors*0.05*coats;
+        const mat=gals*trimProd.p;
+        totalHrs+=hrs; totalMatRaw+=mat;
+        lineItems.push({item:rName+' — Doors ×'+doors,hrs,gals,mat,prod:trimProd});
+      }
+      const wins=parseInt(document.getElementById('rWins_'+id)?.value)||0;
+      if(wins>0){
+        const hrsEa=RATES.winDH*(coats===1?0.6:coats===3?1.4:1.0);
+        const hrs=wins*hrsEa*condMod;
+        const gals=wins*0.04*coats;
+        const mat=gals*trimProd.p;
+        totalHrs+=hrs; totalMatRaw+=mat;
+        lineItems.push({item:rName+' — Windows ×'+wins,hrs,gals,mat,prod:trimProd});
+      }
+
+      // Prep — window treatments
+      const treatOn=document.getElementById('treatOn_'+id)?.checked;
+      if(treatOn&&wins>0){
+        const hrs=wins*(15/60);
+        totalHrs+=hrs;
+        lineItems.push({item:rName+' — Window Treatments (remove/replace)',hrs,gals:0,mat:0});
+      }
+      // Prep — electrical covers
+      const elecOn=document.getElementById('elecOn_'+id)?.checked;
+      if(elecOn){
+        const recep=parseInt(document.getElementById('recep_'+id)?.textContent)||4;
+        const sw=parseInt(document.getElementById('switch_'+id)?.textContent)||2;
+        const total=recep+sw;
+        const hrs=total*(5/60);
+        totalHrs+=hrs;
+        lineItems.push({item:rName+' — Electrical Covers ×'+total+' (remove/replace)',hrs,gals:0,mat:0});
+      }
+    }
+
+    if(type==='void'){
+      const vW=parseFloat(document.getElementById('voidW_'+id)?.value)||0;
+      const vH=parseFloat(document.getElementById('voidH_'+id)?.value)||0;
+      if(!vW||!vH)return;
+      const voidSF=vW*vH;
+      const voidPerim=2*(vW+vH);
+      const vName=document.getElementById('rName_'+id)?.value||'Void / Arch';
+      const trimOn=document.getElementById('voidTrim_'+id)?.checked;
+      // Wall deduction noted as info item — negative
+      lineItems.push({item:vName+' — Wall Deduction (assign to: '+( document.getElementById('voidRoom_'+id)?.value||'see notes')+')',hrs:0,gals:0,mat:0,note:`−${voidSF.toFixed(0)} sq ft from assigned room`});
+      if(trimOn){
+        const rate=RATES.base3*coatAdj;
+        const hrs=(voidPerim/rate)*condMod;
+        const gals=(voidPerim*0.0833*coats)/trimProd.sp;
+        const mat=gals*trimProd.p;
+        totalHrs+=hrs; totalMatRaw+=mat;
+        lineItems.push({item:vName+' — Casing Trim',lf:voidPerim,hrs,gals,mat,prod:trimProd});
+      }
+    }
+
+    if(type==='stair'){
+      const run=parseFloat(document.getElementById('stairRun_'+id)?.value)||0;
+      const h=parseFloat(document.getElementById('stairH_'+id)?.value)||9;
+      const sides=parseInt(document.getElementById('stairSides_'+id)?.value)||1;
+      const ceilOn=document.getElementById('stairCeil_'+id)?.checked;
+      const strOn=document.getElementById('stairStr_'+id)?.checked;
+      if(!run)return;
+      // Trapezoid wall: (base × height) / 2 × sides
+      const wallSF=(run*h/2)*sides;
+      const rate=RATES.w8*coatAdj;
+      const hrs=(wallSF/rate)*condMod;
+      const gals=(wallSF*coats)/wallProd.sp;
+      const mat=gals*wallProd.p;
+      totalHrs+=hrs; totalMatRaw+=mat;
+      lineItems.push({item:'Stairway — Walls',sf:wallSF,hrs,gals,mat,prod:wallProd});
+
+      if(ceilOn){
+        const ceilSF=run*(h*0.4);
+        const cHrs=(ceilSF/RATES.ceil*coatAdj)*condMod;
+        const cGals=(ceilSF*coats)/ceilProd.sp;
+        const cMat=cGals*ceilProd.p;
+        totalHrs+=cHrs; totalMatRaw+=cMat;
+        lineItems.push({item:'Stairway — Ceiling',sf:ceilSF,hrs:cHrs,gals:cGals,mat:cMat,prod:ceilProd});
+      }
+      if(strOn){
+        const strLF=run*1.15*sides;
+        const sRate=RATES.base3*coatAdj;
+        const sHrs=(strLF/sRate)*condMod;
+        const sGals=(strLF*0.0833*coats)/trimProd.sp;
+        const sMat=sGals*trimProd.p;
+        totalHrs+=sHrs; totalMatRaw+=sMat;
+        lineItems.push({item:'Stairway — Stringer Trim',lf:strLF,hrs:sHrs,gals:sGals,mat:sMat,prod:trimProd});
+      }
+    }
+
+    // Specialty areas for this room
+    document.querySelectorAll('[id^="spec_"]').forEach(specEl=>{
+      const sid=specEl.id.replace('spec_','');
+      const sRoom=document.getElementById('sRoom_'+sid)?.value;
+      if(sRoom!=id)return;
+      const sLen=parseFloat(document.getElementById('sLen_'+sid)?.value)||0;
+      const sH=parseFloat(document.getElementById('sH_'+sid)?.value)||0;
+      if(!sLen||!sH)return;
+      const sSF=sLen*sH;
+      const sCoats=parseInt(document.getElementById('sCoats_'+sid)?.value)||2;
+      const sCoatAdj=sCoats===1?1.4:sCoats===3?0.7:1.0;
+      const sLabel=document.getElementById('sLabel_'+sid)?.value||'Specialty Area';
+      const sWalls=specEl.querySelector('[data-spec-surf="walls"]')?.classList.contains('sel');
+      const sTrim=specEl.querySelector('[data-spec-surf="trim"]')?.classList.contains('sel');
+      if(sWalls){
+        const sHrs=(sSF/RATES.w8*sCoatAdj)*condMod;
+        const sGals=(sSF*sCoats)/wallProd.sp;
+        const sMat=sGals*wallProd.p;
+        totalHrs+=sHrs; totalMatRaw+=sMat;
+        lineItems.push({item:'Specialty: '+sLabel+' — Surface',sf:sSF,hrs:sHrs,gals:sGals,mat:sMat,prod:wallProd});
+      }
+      if(sTrim){
+        const tLF=(sLen+sH)*2;
+        const tHrs=(tLF/RATES.base3*sCoatAdj)*condMod;
+        const tGals=(tLF*0.0833*sCoats)/trimProd.sp;
+        const tMat=tGals*trimProd.p;
+        totalHrs+=tHrs; totalMatRaw+=tMat;
+        lineItems.push({item:'Specialty: '+sLabel+' — Trim',lf:tLF,hrs:tHrs,gals:tGals,mat:tMat,prod:trimProd});
+      }
+    });
+  });
+
+  // Global surcharges
+  if(specials.includes('wallpaper')){
+    const wHrs=totalHrs*0.30;
+    totalHrs+=wHrs;
+    lineItems.push({item:'⚠ Wallpaper Removal (+30% labor)',hrs:wHrs,gals:0,mat:0});
+  }
+  if(specials.includes('dark')){
+    const dHrs=totalHrs*0.15;
+    totalHrs+=dHrs;
+    lineItems.push({item:'⚠ Dark-to-Light Color Change (+15%)',hrs:dHrs,gals:0,mat:0});
+  }
+
+  const totalLabor=totalHrs*crew.rate;
+
+  calcBase={
+    custName:document.getElementById('custName').value||'Customer',
+    custAddr:document.getElementById('custAddr').value||'',
+    estDate:document.getElementById('estDate').value||'',
+    startDate:document.getElementById('startDate').value||'',
+    custType:document.getElementById('custType').value,
+    custConcern:document.getElementById('custConcern').value,
+    siteNotes:document.getElementById('siteNotes').value,
+    selectedCond:selCond_,specials:getChecked(),
+    crew,markup,totalHrs,totalLabor,totalMatRaw,lineItems
+  };
+
+  if(document.getElementById('markupPct2'))
+    document.getElementById('markupPct2').value=Math.round(markup*100);
+
+  renderResults(55);
+  updateProdPanel();
+  goTo(2);
+}
+
+function renderResults(gpTarget){
+  const r=calcBase;
+  if(!r.totalHrs)return;
+  const mu=(parseFloat(document.getElementById('markupPct2')?.value)||50)/100;
+  const matBilled=r.totalMatRaw*(1+mu);
+  const cogs=r.totalLabor+r.totalMatRaw;
+  const price=cogs/(1-gpTarget/100);
+  const effRate=(price-matBilled)/r.totalHrs;
+  const gp=((price-cogs)/price)*100;
+
+  document.getElementById('resPrice').textContent='$'+Math.round(price).toLocaleString();
+  document.getElementById('resHrs').textContent=r.totalHrs.toFixed(1);
+  document.getElementById('resLabor').textContent='$'+Math.round(r.totalLabor).toLocaleString();
+  document.getElementById('resMat').textContent='$'+Math.round(matBilled).toLocaleString();
+
+  const gpl=document.getElementById('resGPLine');
+  gpl.textContent=gp.toFixed(1)+'% GP · $'+Math.round(effRate)+'/hr effective · $75/hr reference';
+  gpl.className='price-gp '+(gp>=54?'good':gp>=48?'warn':'bad');
+  document.getElementById('gpCtrl').value=gpTarget.toFixed(1);
+  document.getElementById('rateCtrl').value=Math.round(effRate);
+
+  // KPI
+  document.getElementById('kRate').textContent='$'+Math.round(effRate)+'/hr';
+  document.getElementById('kGP').textContent=gp.toFixed(1)+'%';
+  document.getElementById('kRPD').textContent='$'+Math.round(effRate*8*2).toLocaleString();
+  const vs=((price-5000)/5000*100);
+  document.getElementById('kAvg').textContent=(vs>=0?'+':'')+vs.toFixed(0)+'% vs $5K avg';
+
+  // Warnings
+  const wz=document.getElementById('warnZone');
+  wz.innerHTML='';
+  if(gp<50)wz.innerHTML+=`<div class="danger-box">⚠ GP ${gp.toFixed(1)}% — below 55% target. Adjust price or scope.</div>`;
+  else if(gp<54)wz.innerHTML+=`<div class="warn-box">GP ${gp.toFixed(1)}% — slightly below target. Review before sending.</div>`;
+  if(r.specials?.includes('wallpaper'))wz.innerHTML+=`<div class="warn-box">⚠ Wallpaper removal included — confirm scope with customer.</div>`;
+
+  // Line items
+  const tb=document.getElementById('litBody');
+  tb.innerHTML='';
+  r.lineItems.forEach(li=>{
+    const mu2=(parseFloat(document.getElementById('markupPct2')?.value)||50)/100;
+    const matB=li.mat?(li.mat*(1+mu2)):0;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${li.item}${li.note?'<br><span style="font-size:10px;color:var(--amber)">'+li.note+'</span>':''}</td><td>${li.hrs>0?li.hrs.toFixed(1):'—'}</td><td>${li.gals?li.gals.toFixed(1):'—'}</td><td>${li.hrs>0?'$'+Math.round(li.hrs*r.crew.rate).toLocaleString():'—'}</td><td>${matB?'$'+Math.round(matB).toLocaleString():'—'}</td>`;
+    tb.appendChild(tr);
+  });
+  const tot=document.createElement('tr');
+  tot.className='tot-row';
+  const mu2=(parseFloat(document.getElementById('markupPct2')?.value)||50)/100;
+  tot.innerHTML=`<td>TOTAL</td><td>${r.totalHrs.toFixed(1)}</td><td>—</td><td>$${Math.round(r.totalLabor).toLocaleString()}</td><td>$${Math.round(r.totalMatRaw*(1+mu2)).toLocaleString()}</td>`;
+  tb.appendChild(tot);
+
+  calcBase._price=price; calcBase._gp=gp; calcBase._effRate=effRate; calcBase._matBilled=matBilled;
+}
+
+function onGP(){renderResults(parseFloat(document.getElementById('gpCtrl').value)||55);}
+function onRate(){
+  const r=calcBase;
+  if(!r.totalHrs)return;
+  const mu=(parseFloat(document.getElementById('markupPct2')?.value)||50)/100;
+  const matB=r.totalMatRaw*(1+mu);
+  const rate=parseFloat(document.getElementById('rateCtrl').value)||87;
+  const price=(rate*r.totalHrs)+matB;
+  const cogs=r.totalLabor+r.totalMatRaw;
+  const gp=((price-cogs)/price)*100;
+  document.getElementById('gpCtrl').value=gp.toFixed(1);
+  renderResults(gp);
+}
+function recalc(){renderResults(parseFloat(document.getElementById('gpCtrl').value)||55);}
+
+// ── PRODUCT PANEL ────────────────────────────────────────
+function updateProdPanel(){
+  const mu=(parseFloat(document.getElementById('markupPct2')?.value)||50)/100;
+  ['walls','ceilings','trim'].forEach(s=>{
+    const p=PRODS[s][selProds[s]];
+    document.getElementById('pn_'+s).textContent=p.n;
+    document.getElementById('pc_'+s).textContent='Cost: $'+p.p.toFixed(2);
+    document.getElementById('pb_'+s).textContent='Billed: $'+(p.p*(1+mu)).toFixed(2);
+  });
+}
+
+function openModal(surf){
+  modalSurf=surf;
+  const mu=(parseFloat(document.getElementById('markupPct2')?.value)||50)/100;
+  const sLabs={walls:'Walls',ceilings:'Ceilings',trim:'Trim / Doors / Windows'};
+  document.getElementById('modalTitle').textContent='Swap — '+sLabs[surf];
+  document.getElementById('modalSub').textContent='Price difference shown for full job scope';
+  const opts=document.getElementById('modalOpts');
+  opts.innerHTML='';
+  const curP=PRODS[surf][selProds[surf]];
+  PRODS[surf].forEach((p,idx)=>{
+    const isCur=idx===selProds[surf];
+    const billed=(p.p*(1+mu)).toFixed(2);
+    const diff=(p.p-curP.p)*(calcBase.totalMatRaw/curP.p||1)*(1+mu);
+    let diffHTML='';
+    if(!isCur){
+      const sign=diff>=0?'+':'-';
+      const cls=diff>=0?'po-add':'po-save';
+      const lbl=diff>=0?'adds':'saves';
+      diffHTML=`<div class="${cls}">${lbl} ~$${Math.abs(Math.round(diff))}</div>`;
+    }
+    const div=document.createElement('div');
+    div.className='po'+(isCur?' current':'');
+    div.innerHTML=`<div><div class="po-name">${p.n}</div><div class="po-sheen">${p.sh}</div></div><div style="text-align:right"><div class="po-cost">Cost: $${p.p.toFixed(2)}</div><div class="po-billed">Billed: $${billed}</div>${diffHTML}${isCur?'<div style="font-size:11px;font-weight:600;color:var(--navy)">Current</div>':''}</div>`;
+    div.onclick=()=>swapProd(surf,idx);
+    opts.appendChild(div);
+  });
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function swapProd(surf,idx){
+  selProds[surf]=idx;
+  closeModal();
+  // Recalculate material costs with new product
+  const p=PRODS[surf][idx];
+  calcBase.lineItems.forEach(li=>{
+    if(!li.gals)return;
+    const ls=li.item.toLowerCase();
+    let match=false;
+    if(surf==='walls'&&(ls.includes('wall')||ls.includes('specialty')||ls.includes('above cab')||ls.includes('backsplash')||ls.includes('stair')))match=true;
+    if(surf==='ceilings'&&ls.includes('ceil'))match=true;
+    if(surf==='trim'&&(ls.includes('trim')||ls.includes('door')||ls.includes('window')||ls.includes('crown')||ls.includes('string')||ls.includes('cas')))match=true;
+    if(match){li.prod=p;li.mat=li.gals*p.p;}
+  });
+  calcBase.totalMatRaw=calcBase.lineItems.reduce((s,li)=>s+(li.mat||0),0);
+  updateProdPanel();
+  renderResults(parseFloat(document.getElementById('gpCtrl').value)||55);
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');modalSurf=null;}
+function closeModalOut(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+
+// ── PROPOSAL ─────────────────────────────────────────────
+function genProposal(){
+  const r=calcBase;
+  const fn=r.custName?.split(' ')[0]||'there';
+  const openers={
+    quality:`After walking through your home, it's clear you have an eye for quality and high standards for the finished result. We're confident the work will meet and exceed your expectations.`,
+    price:`Thank you for the opportunity to provide this estimate. We've put together a thorough scope with clear deliverables so you can compare accurately and feel confident in your decision.`,
+    reliability:`${fn}, I appreciated your sharing your experience during the walkthrough. At All Decked Out Painting, communication and follow-through are non-negotiable — you'll know exactly when we start and we finish what we start.`,
+    trust:`${fn}, it means a great deal that you reached out to us. We take that trust seriously and deliver work that gives you confidence every step of the way.`,
+    timeline:`${fn}, we heard you on the timeline and we're planning around it. Everything below is scoped to be completed on schedule — that commitment is built into how we work.`,
+    '': `${fn}, after walking through your home we have a clear picture of what it will take to deliver a result you'll be proud of for years to come.`
+  };
+  const condNote={
+    good:'Surface conditions are good throughout — minimal prep required.',
+    minor:'Minor repairs are noted and included. All patching, sanding, and spot priming completed before finish coats.',
+    moderate:'Moderate surface repairs included — all areas properly prepared before painting begins.',
+    heavy:'Significant surface preparation included and completed thoroughly before finish coats begin.'
+  };
+
+  const allBlocks=document.querySelectorAll('.room-block');
+  let scopeText='';
+  allBlocks.forEach(block=>{
+    const id=block.id.replace('rb_','');
+    const roomObj=rooms.find(r=>r.id==id);
+    if(!roomObj)return;
+    const type=roomObj.type||'std';
+    const name=document.getElementById('rName_'+id)?.value||'Room';
+    const coats=document.getElementById('rCoats_'+id)?.value||'2';
+    const cStr=coats==='1'?'one coat':coats==='3'?'three coats':'two coats';
+
+    if(type==='std'||type==='kitchen'){
+      const surfs=[];
+      block.querySelectorAll('[data-surf].sel').forEach(el=>{
+        const m={walls:'walls',ceiling:'ceiling',trim:'trim and baseboards',crown:'crown moulding'};
+        if(m[el.dataset.surf])surfs.push(m[el.dataset.surf]);
+      });
+      const doors=parseInt(document.getElementById('rDoors_'+id)?.value)||0;
+      const wins=parseInt(document.getElementById('rWins_'+id)?.value)||0;
+      if(doors>0)surfs.push(doors+(doors===1?' door':' doors'));
+      if(wins>0)surfs.push(wins+(wins===1?' window':' windows'));
+      if(surfs.length>0)
+        scopeText+=`\n${name}\n${cStr.charAt(0).toUpperCase()+cStr.slice(1)} of Sherwin-Williams professional-grade products applied to: ${surfs.join(', ')}. ${condNote[r.selectedCond]||''}\n`;
+    } else if(type==='void'){
+      scopeText+=`\n${name}\nCasing and trim painted. Wall deduction applied to adjoining room.\n`;
+    } else if(type==='stair'){
+      scopeText+=`\nStairway\nWalls painted in full. ${document.getElementById('stairStr_'+id)?.checked?'Stringer trim included.':''} ${document.getElementById('stairCeil_'+id)?.checked?'Ceiling included.':''}\n`;
+    }
+  });
+
+  const wp=PRODS.walls[selProds.walls];
+  const cp=PRODS.ceilings[selProds.ceilings];
+  const tp=PRODS.trim[selProds.trim];
+
+  let p=`Scope of Work — All Decked Out Painting\n`;
+  if(r.custAddr)p+=`${r.custAddr}\n`;
+  p+=`\n${openers[r.custType]||openers['']}\n`;
+  p+=scopeText;
+  p+=`\nProducts Specified\nWalls: ${wp.n}\nCeilings: ${cp.n}\nTrim, Doors & Windows: ${tp.n}\n`;
+  p+=`\nWhat's Included\n• Complete surface preparation including patching, sanding, and spot priming\n• Professional-grade Sherwin-Williams products throughout\n• Full protection of all floors, furniture, and fixtures\n• Hand-cut edges on all trim, ceilings, and transitions\n• Removal and replacement of window treatments and electrical cover plates\n• Daily cleanup at end of each work day\n• Final walkthrough with owner upon completion\n`;
+  if(r.startDate)p+=`\nTarget Start Date: ${r.startDate}\n`;
+  p+=`\nAll Decked Out Painting looks forward to this project. Call or text anytime at (717) 576-8013.\n\n— Ric Caylor\nAll Decked Out Painting · www.alldeckedoutservices.com`;
+  document.getElementById('propText').textContent=p;
+}
+
+function genBrief(){
+  const r=calcBase;
+  const bTrig=r.totalHrs*0.90;
+  const bBonus=r.totalHrs*0.10*r.crew.rate*0.30;
+  const cLabs={good:'Good — light prep',minor:'Minor repairs',moderate:'Moderate repairs',heavy:'Heavy prep / wallpaper'};
+  const sLabs={occupied:'Occupied home',furniture:'Heavy furniture',dark:'Dark-to-light',smoker:'Smoker',wallpaper:'Wallpaper removal'};
+
+  const rows=[
+    ['Customer',r.custName],['Address',r.custAddr],['Start',r.startDate||'TBD'],
+    ['Crew',r.crew.name],['Budgeted Hours',r.totalHrs.toFixed(1)+' hrs'],
+    ['Labor Budget','$'+Math.round(r.totalLabor).toLocaleString()],
+    ['Material Budget (cost)','$'+Math.round(r.totalMatRaw).toLocaleString()],
+    ['Condition',cLabs[r.selectedCond]||'Good'],
+  ];
+  if(r.specials?.length>0)rows.push(['Special Conditions',r.specials.map(s=>sLabs[s]||s).join(', ')]);
+  if(r.siteNotes)rows.push(['Notes',r.siteNotes]);
+
+  let html=rows.map(([l,v])=>`<div class="br-row"><span class="br-label">${l}</span><span class="br-val">${v||'—'}</span></div>`).join('');
+  const wp=PRODS.walls[selProds.walls];
+  const cp=PRODS.ceilings[selProds.ceilings];
+  const tp=PRODS.trim[selProds.trim];
+  html+=`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--gray2)">
+    <div style="font-size:10px;font-weight:600;color:var(--gray4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Paint Products</div>
+    <div class="br-row"><span class="br-label">Walls</span><span class="br-val" style="font-family:'DM Sans',sans-serif;font-size:12px;">${wp.n}</span></div>
+    <div class="br-row"><span class="br-label">Ceilings</span><span class="br-val" style="font-family:'DM Sans',sans-serif;font-size:12px;">${cp.n}</span></div>
+    <div class="br-row"><span class="br-label">Trim/Doors/Win</span><span class="br-val" style="font-family:'DM Sans',sans-serif;font-size:12px;">${tp.n}</span></div>
+  </div>`;
+  document.getElementById('briefContent').innerHTML=html;
+  document.getElementById('bonusCalc').innerHTML=
+    `Budgeted: <strong>${r.totalHrs.toFixed(1)} hrs</strong><br>`+
+    `Bonus triggers at: <strong>${bTrig.toFixed(1)} hrs or less</strong><br>`+
+    `Bonus amount: <strong>~$${Math.round(bBonus).toLocaleString()}</strong> split between crew<br><br>`+
+    `<em>Quality confirmed · No callbacks 30 days · No material waste · On schedule · Ric sign-off</em>`;
+}
+
+function copyProp(){
+  navigator.clipboard.writeText(document.getElementById('propText').textContent).then(()=>{
+    const b=document.querySelector('.copy-btn');
+    b.textContent='Copied! ✓';
+    setTimeout(()=>{b.textContent='Copy Proposal to Clipboard';},2000);
+  });
+}
+
+function startOver(){
+  ['custName','custAddr','custConcern','siteNotes'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('custType').value='';
+  document.getElementById('roomList').innerHTML='';
+  rooms=[];roomCount=0;specCount=0;
+  selCond_='good';selCond('good');
+  selProds={walls:0,ceilings:0,trim:0};
+  calcBase={};
+  goTo(0);
+  addRoom('std');
+}
+
+window.onload=function(){
+  document.getElementById('estDate').value=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  addRoom('std');
+};
+</script>
+</body>
+</html>
